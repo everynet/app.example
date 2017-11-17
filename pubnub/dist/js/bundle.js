@@ -5677,6 +5677,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Bus = function () {
 	function Bus(pubNubConfig, addLog, onMessage) {
+		var _this = this;
+
 		_classCallCheck(this, Bus);
 
 		this.client = new _pubnub2.default({
@@ -5687,16 +5689,15 @@ var Bus = function () {
 		this.channelDown = pubNubConfig.channelDown;
 		this.channelUp = pubNubConfig.channelUp;
 		this.addLog = addLog;
-		this.onMessageCallback = onMessage;
-
-		// Bindings
-		this.status = this.status.bind(this);
-		this.onMessage = this.onMessage.bind(this);
 
 		// Add Listener
 		this.client.addListener({
-			status: this.status,
-			message: this.onMessage
+			status: function status(s) {
+				return _this.status(s);
+			},
+			message: function message(msg) {
+				return onMessage(msg.message);
+			}
 		});
 
 		this.client.subscribe({ channels: [this.channelUp] });
@@ -5710,11 +5711,6 @@ var Bus = function () {
 			}
 		}
 	}, {
-		key: 'onMessage',
-		value: function onMessage(message) {
-			this.onMessageCallback(message.message);
-		}
-	}, {
 		key: 'send',
 		value: function send(message, cb) {
 			this.client.publish({ channel: this.channelDown,
@@ -5725,28 +5721,109 @@ var Bus = function () {
 	return Bus;
 }();
 
-var ApplicationServer = function (_React$Component) {
-	_inherits(ApplicationServer, _React$Component);
+var ApplicationServer = function () {
+	function ApplicationServer(state, addPacket, addLog) {
+		var _this2 = this;
 
-	function ApplicationServer(props) {
 		_classCallCheck(this, ApplicationServer);
 
-		var _this = _possibleConstructorReturn(this, (ApplicationServer.__proto__ || Object.getPrototypeOf(ApplicationServer)).call(this, props));
-
-		_this.state = { form: { port: 5,
-				payload: '01ABFC' },
-			packets: [],
-			logs: [] };
-
-		_this.setPayload = _this.setPayload.bind(_this);
-		_this.setPort = _this.setPort.bind(_this);
-		_this.sendNotify = _this.sendNotify.bind(_this);
-		_this.onMessage = _this.onMessage.bind(_this);
-		_this.addLog = _this.addLog.bind(_this);
-		return _this;
+		this.state = state;
+		this.addPacket = addPacket;
+		this.addLog = addLog;
+		this.bus = new Bus(this.state.props.pubNub, this.addLog, function (p) {
+			return _this2.handlePacket(p);
+		});
 	}
 
 	_createClass(ApplicationServer, [{
+		key: 'hexToBase64',
+		value: function hexToBase64(hexstr) {
+			if (hexstr.length == 0) return "";
+			return btoa(hexstr.match(/\w{2}/g).map(function (hex) {
+				return String.fromCharCode(parseInt(hex, 16));
+			}).join(""));
+		}
+	}, {
+		key: 'handlePacket',
+		value: function handlePacket(packet) {
+			this.addPacket(packet);
+			switch (packet.type) {
+				case 'downlink_request':
+					this.handleDownlinkRequest(packet);
+					break;
+				case 'uplink':
+					console.log('Add the uplink handler here.');
+					break;
+				case 'downlink':
+					console.log('Add the downlink handler here.');
+					break;
+				case 'join_request':
+					console.log('Add the join_request handler here.');
+					break;
+				case 'error':
+					console.log('Add the error handler here.');
+					break;
+				case 'warning':
+					console.log('Add the warning handler here.');
+					break;
+				case 'info':
+					console.log('Add the info handler here.');
+					break;
+			}
+		}
+	}, {
+		key: 'handleDownlinkRequest',
+		value: function handleDownlinkRequest(packet) {
+			var _this3 = this;
+
+			this.addLog('Received downlink_request, prepare downlink_response');
+
+			var downlink_response = { meta: packet.meta,
+				type: 'downlink_response',
+				params: { port: this.state.form.port,
+					payload: this.hexToBase64(this.state.form.payload),
+					counter_down: packet.params.counter_down } };
+
+			this.bus.send(downlink_response, function () {
+				return _this3.addLog('The downlink_response successful published');
+			});
+		}
+	}, {
+		key: 'sendDownlinkClaim',
+		value: function sendDownlinkClaim(cb) {
+			var notify = { type: 'downlink_claim',
+				meta: { network: this.state.props.network,
+					device: this.state.props.devEui } };
+			this.bus.send(notify, cb);
+		}
+	}]);
+
+	return ApplicationServer;
+}();
+
+var IApplicationServer = function (_React$Component) {
+	_inherits(IApplicationServer, _React$Component);
+
+	function IApplicationServer(props) {
+		_classCallCheck(this, IApplicationServer);
+
+		var _this4 = _possibleConstructorReturn(this, (IApplicationServer.__proto__ || Object.getPrototypeOf(IApplicationServer)).call(this, props));
+
+		_this4.state = { form: { port: 5,
+				payload: '01ABFC' },
+			packets: [],
+			logs: [],
+			props: props };
+
+		_this4.setPayload = _this4.setPayload.bind(_this4);
+		_this4.setPort = _this4.setPort.bind(_this4);
+		_this4.sendNotify = _this4.sendNotify.bind(_this4);
+		_this4.addLog = _this4.addLog.bind(_this4);
+		_this4.addPacket = _this4.addPacket.bind(_this4);
+		return _this4;
+	}
+
+	_createClass(IApplicationServer, [{
 		key: 'setPayload',
 		value: function setPayload(payload) {
 			this.state.form.payload = payload.target.value;
@@ -5761,58 +5838,16 @@ var ApplicationServer = function (_React$Component) {
 	}, {
 		key: 'sendNotify',
 		value: function sendNotify() {
-			var _this2 = this;
+			var _this5 = this;
 
-			var notify = { type: 'downlink_claim',
-				meta: { network: this.props.network,
-					device: this.props.devEui } };
-			this.bus.send(notify, function () {
-				return _this2.addLog('The downlink_claim successful published');
+			this.applicationServer.sendDownlinkClaim(function () {
+				return _this5.addLog('The downlink_claim successful published');
 			});
 		}
 	}, {
-		key: 'hexToBase64',
-		value: function hexToBase64(hexstr) {
-			if (hexstr.length == 0) return "";
-			return btoa(hexstr.match(/\w{2}/g).map(function (hex) {
-				return String.fromCharCode(parseInt(hex, 16));
-			}).join(""));
-		}
-	}, {
-		key: 'base64toHex',
-		value: function base64toHex(base64) {
-			var raw = atob(base64);
-			return raw.split('').map(function (c) {
-				var code = c.charCodeAt();
-				var high_bytes = code < 16 ? '0' : '';
-				return high_bytes + code.toString(16);
-			}).join("").toUpperCase();
-		}
-	}, {
-		key: 'handlePacket',
-		value: function handlePacket(packet) {
-			var _this3 = this;
-
-			if (packet.type === "downlink_request") {
-
-				this.addLog('Received downlink_request, prepare downlink_response');
-
-				var downlink_response = { meta: packet.meta,
-					type: 'downlink_response',
-					params: { port: this.state.form.port,
-						payload: this.hexToBase64(this.state.form.payload),
-						counter_down: packet.params.counter_down } };
-
-				this.bus.send(downlink_response, function () {
-					return _this3.addLog('The downlink_response successful published');
-				});
-			}
-		}
-	}, {
-		key: 'onMessage',
-		value: function onMessage(packet) {
+		key: 'addPacket',
+		value: function addPacket(packet) {
 			var str_packet = JSON.stringify(packet);
-			this.handlePacket(packet);
 			this.state.packets.unshift(str_packet);
 			this.setState(this.state.packets);
 		}
@@ -5825,7 +5860,7 @@ var ApplicationServer = function (_React$Component) {
 	}, {
 		key: 'componentDidMount',
 		value: function componentDidMount() {
-			this.bus = new Bus(this.props.pubNub, this.addLog, this.onMessage);
+			this.applicationServer = new ApplicationServer(this.state, this.addPacket, this.addLog);
 		}
 	}, {
 		key: 'render',
@@ -5833,7 +5868,7 @@ var ApplicationServer = function (_React$Component) {
 			return _react2.default.createElement(
 				'div',
 				null,
-				_react2.default.createElement(Sender, { form: this.state.form, setPayload: this.setPayload, setPort: this.setPort, sendNotify: this.sendNotify }),
+				_react2.default.createElement(ISender, { form: this.state.form, setPayload: this.setPayload, setPort: this.setPort, sendNotify: this.sendNotify }),
 				_react2.default.createElement(
 					'div',
 					{ className: 'row gutters ' },
@@ -5886,23 +5921,23 @@ var ApplicationServer = function (_React$Component) {
 		}
 	}]);
 
-	return ApplicationServer;
+	return IApplicationServer;
 }(_react2.default.Component);
 
-var Sender = function (_React$Component2) {
-	_inherits(Sender, _React$Component2);
+var ISender = function (_React$Component2) {
+	_inherits(ISender, _React$Component2);
 
-	function Sender(props) {
-		_classCallCheck(this, Sender);
+	function ISender(props) {
+		_classCallCheck(this, ISender);
 
-		var _this4 = _possibleConstructorReturn(this, (Sender.__proto__ || Object.getPrototypeOf(Sender)).call(this, props));
+		var _this6 = _possibleConstructorReturn(this, (ISender.__proto__ || Object.getPrototypeOf(ISender)).call(this, props));
 
-		_this4.state = props.form;
-		_this4.ports = R.range(1, 224);
-		return _this4;
+		_this6.state = props.form;
+		_this6.ports = R.range(1, 224);
+		return _this6;
 	}
 
-	_createClass(Sender, [{
+	_createClass(ISender, [{
 		key: 'render',
 		value: function render() {
 			return _react2.default.createElement(
@@ -5951,12 +5986,7 @@ var Sender = function (_React$Component2) {
 									'Hexadecimal payload: eg. 01ABFC'
 								)
 							),
-							_react2.default.createElement('input', { id: 'payload', type: 'text', value: this.state.payload, onChange: this.props.setPayload }),
-							_react2.default.createElement(
-								'div',
-								{ className: 'desc' },
-								'...'
-							)
+							_react2.default.createElement('input', { id: 'payload', type: 'text', value: this.state.payload, onChange: this.props.setPayload })
 						)
 					),
 					_react2.default.createElement(
@@ -5982,10 +6012,10 @@ var Sender = function (_React$Component2) {
 		}
 	}]);
 
-	return Sender;
+	return ISender;
 }(_react2.default.Component);
 
-_reactDom2.default.render(_react2.default.createElement(ApplicationServer, {
+_reactDom2.default.render(_react2.default.createElement(IApplicationServer, {
 	network: '2a1f347c',
 	devEui: 'a69fbe3820915cc4',
 	pubNub: { publishKey: 'pub-c-89363db2-94be-4035-a95a-a0c066f7c25c',
