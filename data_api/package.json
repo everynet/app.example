@@ -8,7 +8,6 @@
     "start": "webpack && webpack-dev-server --hot --content-base dist/"
   },
   "dependencies": {
-    "pubnub": "^4.17.0",
     "ramda": "^0.25.0",
     "react": "^16.1.1",
     "react-dom": "^16.1.1",
