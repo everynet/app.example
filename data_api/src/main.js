@@ -214,7 +214,7 @@ class ISender extends React.Component {
 }
 
 ReactDOM.render(<IApplicationServer
-                network={config.netowrk}
+                network={config.network}
                 devEui={config.device}
                 ns={{accessToken: config.accessToken,
                      filter: config.filterId,

@@ -5648,8 +5648,6 @@ var where = /*#__PURE__*/Object(__WEBPACK_IMPORTED_MODULE_0__internal_curry2__["
 
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-//import WebSocket from 'ws';
-
 
 var _react = __webpack_require__(47);
 
@@ -6016,7 +6014,7 @@ var ISender = function (_React$Component2) {
 }(_react2.default.Component);
 
 _reactDom2.default.render(_react2.default.createElement(IApplicationServer, {
-	network: config.netowrk,
+	network: config.network,
 	devEui: config.device,
 	ns: { accessToken: config.accessToken,
 		filter: config.filterId,

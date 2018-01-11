@@ -223,7 +223,7 @@ class ISender extends React.Component {
 }
 
 ReactDOM.render(<IApplicationServer
-                network={config.netowrk}
+                network={config.network}
                 devEui={config.device}
                 pubNub={{publishKey: config.publishKey,
                          subscribeKey: config.subscribeKey,
