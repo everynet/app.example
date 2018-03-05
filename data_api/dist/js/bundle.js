@@ -5672,9 +5672,9 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var config = {
-	UrlDataAPI: 'wss://ns.atc.everynet.io/api/v1.0/data',
-	accessToken: 'bdcca788383444b49013d201003eea1e',
-	filterId: '59ae890a63c0f30009e95709',
+	UrlDataAPI: 'ws://dev.everynet.io:50000/api/data',
+	accessToken: '81632e5831c04a40ba469072f6e5fa20',
+	filterId: '5a71be1153d670538228cfb5',
 
 	// Is used only to send `downlink_claim` message to server
 	// Set device of class "C"
